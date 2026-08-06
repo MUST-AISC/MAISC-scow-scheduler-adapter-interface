@@ -1,5 +1,11 @@
 # @scow/scow-scheduler-adapter-interface
 
+## 1.7.0
+
+### Minor Changes
+
+- 9d4c210: 在 `JobInfo` 中新增 `gpus_req`，用于返回作业申请的加速卡卡数。
+
 ## 1.6.0
 
 ### Minor Changes
