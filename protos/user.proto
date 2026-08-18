@@ -58,26 +58,33 @@ message QueryUserInAccountBlockStatusResponse {
 service UserService {
   /*
    * description: add user to account
+   * Deprecated: use AssociationService.ApplyAssociation with a user key.
    * errors: 
    * - account not exist
    *   NOT_FOUND, ACCOUNT_NOT_FOUND, {}
    * - user already exists in account
    *   ALREADY_EXISTS, USER_ACCOUNT_ALREADY_EXISTS, {}
    */
-  rpc AddUserToAccount(AddUserToAccountRequest) returns (AddUserToAccountResponse);
+  rpc AddUserToAccount(AddUserToAccountRequest) returns (AddUserToAccountResponse) {
+    option deprecated = true;
+  }
 
   /*
    * description: remove user from account
+   * Deprecated: use AssociationService.ApplyAssociation with a user key and job guard.
    * errors: 
    * - account not exist
    *   NOT_FOUND, ACCOUNT_NOT_FOUND, {}
    * - user not exist in account
    *   NOT_FOUND, USER_ACCOUNT_NOT_FOUND, {}
    */
-  rpc RemoveUserFromAccount(RemoveUserFromAccountRequest) returns (RemoveUserFromAccountResponse);
+  rpc RemoveUserFromAccount(RemoveUserFromAccountRequest) returns (RemoveUserFromAccountResponse) {
+    option deprecated = true;
+  }
 
   /*
    * description: block user in account
+   * Deprecated: use AssociationService.ApplyAssociation with field-level limits.
    * errors: 
    * - account not exist
    *   NOT_FOUND, ACCOUNT_NOT_FOUND, {}
@@ -86,10 +93,13 @@ service UserService {
    * special case:
    * - already blocked, don't throw error
    */
-  rpc BlockUserInAccount(BlockUserInAccountRequest) returns (BlockUserInAccountResponse);
+  rpc BlockUserInAccount(BlockUserInAccountRequest) returns (BlockUserInAccountResponse) {
+    option deprecated = true;
+  }
 
   /*
    * description: unblock user in account
+   * Deprecated: use AssociationService.ApplyAssociation with a confirmed baseline.
    * errors: 
    * - account not exist
    *   NOT_FOUND, ACCOUNT_NOT_FOUND, {}
@@ -98,15 +108,20 @@ service UserService {
    * special case:
    * - already unblocked, don't throw error
    */
-  rpc UnblockUserInAccount(UnblockUserInAccountRequest) returns (UnblockUserInAccountResponse);
+  rpc UnblockUserInAccount(UnblockUserInAccountRequest) returns (UnblockUserInAccountResponse) {
+    option deprecated = true;
+  }
 
   /*
    * description: query if a user is blocked in an account
+   * Deprecated: use AssociationService.GetAssociation and inspect enforcement.
    * errors: 
    * - account not exist
    *   NOT_FOUND, ACCOUNT_NOT_FOUND, {}
    * - user not exist in account
    *   NOT_FOUND, USER_ACCOUNT_NOT_FOUND, {} 
    */
-  rpc QueryUserInAccountBlockStatus(QueryUserInAccountBlockStatusRequest) returns (QueryUserInAccountBlockStatusResponse);
+  rpc QueryUserInAccountBlockStatus(QueryUserInAccountBlockStatusRequest) returns (QueryUserInAccountBlockStatusResponse) {
+    option deprecated = true;
+  }
 }

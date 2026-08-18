@@ -14,6 +14,9 @@ syntax = "proto3";
 
 package scow.scheduler_adapter;
 
+import "protos/association.proto";
+import "google/protobuf/timestamp.proto";
+
 message GetVersionRequest {}
 
 message GetVersionResponse {
@@ -22,9 +25,62 @@ message GetVersionResponse {
   uint32 patch = 3;
 }
 
+enum Capability {
+  CAPABILITY_UNSPECIFIED = 0;
+  CAPABILITY_EXACT_ASSOCIATION_QUERY = 1;
+  CAPABILITY_COMPARE_AND_SET_ASSOCIATION_UPDATE = 2;
+  CAPABILITY_COMPLETE_ASSOCIATION_SNAPSHOT = 3;
+  CAPABILITY_ASSOCIATION_JOB_GUARD = 4;
+  CAPABILITY_FIELD_LEVEL_LIMIT_UPDATE = 5;
+}
+
+message AssociationSubjectCapabilities {
+  AssociationSubjectType subject_type = 1;
+  bool query = 2;
+  bool create = 3;
+  bool update = 4;
+  bool delete = 5;
+}
+
+message AssociationLimitCapabilities {
+  string name = 1;
+  bool readable = 2;
+  bool writable = 3;
+  bool enforced = 4;
+}
+
+message AssociationCapabilities {
+  repeated AssociationSubjectCapabilities subjects = 1;
+  repeated AssociationLimitCapabilities limits = 2;
+  bool partition_update = 3;
+  bool qos_update = 4;
+  bool default_qos_update = 5;
+  bool snapshot_includes_empty_accounts = 6;
+  bool consistent_snapshot = 7;
+  bool delete_checks_active_jobs = 8;
+  repeated string blocking_limit_names = 9;
+  bool blocking_limits_prevent_new_submissions = 10;
+  bool blocking_limits_prevent_pending_jobs_from_starting = 11;
+}
+
+message GetCapabilitiesRequest {}
+
+message GetCapabilitiesResponse {
+  repeated Capability capabilities = 1;
+  AssociationCapabilities association = 2;
+  string fingerprint = 3;
+  google.protobuf.Timestamp observed_at = 4;
+}
+
 service VersionService {
   /*
     Get the version currently implemented by the server.
   */
   rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
+
+  /*
+    Get capabilities detected from the scheduler and adapter configuration.
+    Callers must not infer these values from GetVersion alone.
+  */
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
 }

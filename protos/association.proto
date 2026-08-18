@@ -1,0 +1,270 @@
+/**
+ * Copyright (c) 2022 Peking University and Peking University Institute for
+ * Computing and Digital Economy SCOW is licensed under Mulan PSL v2. You can
+ * use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *          http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY
+ * KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+ * NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE. See the
+ * Mulan PSL v2 for more details.
+ */
+
+syntax = "proto3";
+
+package scow.scheduler_adapter;
+
+import "google/protobuf/timestamp.proto";
+
+enum AssociationSubjectType {
+  ASSOCIATION_SUBJECT_TYPE_UNSPECIFIED = 0;
+  ASSOCIATION_SUBJECT_TYPE_ACCOUNT = 1;
+  ASSOCIATION_SUBJECT_TYPE_USER = 2;
+}
+
+message AccountAssociationKey {
+  string account_name = 1;
+}
+
+message UserAssociationKey {
+  string account_name = 1;
+  string user_id = 2;
+}
+
+message AssociationKey {
+  oneof value {
+    AccountAssociationKey account = 1;
+    UserAssociationKey user = 2;
+  }
+}
+
+enum AssociationPresence {
+  ASSOCIATION_PRESENCE_UNSPECIFIED = 0;
+  ASSOCIATION_PRESENCE_ABSENT = 1;
+  ASSOCIATION_PRESENCE_PRESENT = 2;
+}
+
+message PartitionAccess {
+  enum Mode {
+    MODE_UNSPECIFIED = 0;
+    ALL = 1;
+    SPECIFIC = 2;
+    NONE = 3;
+  }
+
+  Mode mode = 1;
+
+  // This field must be empty unless mode is SPECIFIC.
+  repeated string partitions = 2;
+}
+
+message QosAccess {
+  enum Mode {
+    MODE_UNSPECIFIED = 0;
+    ALL_AVAILABLE = 1;
+    SPECIFIC = 2;
+    NONE = 3;
+  }
+
+  Mode mode = 1;
+
+  // This field must be empty unless mode is SPECIFIC.
+  repeated string qos = 2;
+}
+
+message AssociationLimitValue {
+  oneof value {
+    int64 number = 1;
+
+    // When selected, this value must be true.
+    bool unlimited = 2;
+
+    // Lossless scheduler-native value for a limit not standardized by this API.
+    string scheduler_value = 3;
+  }
+}
+
+message AssociationEnforcement {
+  bool prevents_new_submissions = 1;
+  bool prevents_pending_jobs_from_starting = 2;
+  repeated string enforcing_limit_names = 3;
+  bool enforcement_known = 4;
+}
+
+message AssociationState {
+  AssociationPresence presence = 1;
+  PartitionAccess partition_access = 2;
+
+  // Concrete partitions after the adapter resolves scheduler inheritance.
+  repeated string effective_partitions = 3;
+
+  // Concrete QoS names effective on this association.
+  repeated string qos = 4;
+  optional string default_qos = 5;
+  map<string, AssociationLimitValue> limits = 6;
+  AssociationEnforcement enforcement = 7;
+
+  // Hash of the canonical state using fingerprint_schema_version.
+  string fingerprint = 8;
+  google.protobuf.Timestamp observed_at = 9;
+  uint32 fingerprint_schema_version = 10;
+}
+
+message GetAssociationRequest {
+  AssociationKey key = 1;
+}
+
+message GetAssociationResponse {
+  // A confirmed missing association is returned as presence ABSENT. Query
+  // failures must be returned as gRPC errors and never as ABSENT.
+  AssociationState state = 1;
+}
+
+message AssociationPrecondition {
+  AssociationPresence expected_presence = 1;
+  optional string expected_fingerprint = 2;
+}
+
+message LimitMutation {
+  string name = 1;
+
+  oneof operation {
+    AssociationLimitValue set = 2;
+    bool clear_to_parent = 3;
+  }
+}
+
+message DefaultQosMutation {
+  oneof operation {
+    string set = 1;
+    bool clear_to_parent = 2;
+  }
+}
+
+message AssociationPatch {
+  optional AssociationPresence presence = 1;
+  optional PartitionAccess partition_access = 2;
+  optional QosAccess qos_access = 3;
+  optional DefaultQosMutation default_qos = 4;
+  repeated LimitMutation limits = 5;
+}
+
+enum PendingJobAction {
+  PENDING_JOB_ACTION_UNSPECIFIED = 0;
+  PENDING_JOB_ACTION_KEEP = 1;
+  PENDING_JOB_ACTION_CANCEL = 2;
+}
+
+message AssociationJobReference {
+  string job_id = 1;
+  string state = 2;
+  optional string partition = 3;
+  optional google.protobuf.Timestamp submit_time = 4;
+}
+
+message AssociationSafety {
+  // The adapter must check active jobs again immediately before deletion when
+  // this value is true.
+  bool require_no_active_jobs = 1;
+  PendingJobAction pending_job_action = 2;
+
+  // Jobs seen by the caller during confirmation. These are audit evidence and
+  // do not replace the adapter's own pre-mutation check.
+  repeated AssociationJobReference confirmed_jobs = 3;
+  optional google.protobuf.Timestamp checked_at = 4;
+}
+
+message ApplyAssociationRequest {
+  // Stable caller operation ID used for tracing and idempotent retries.
+  string operation_id = 1;
+  AssociationKey key = 2;
+  AssociationPrecondition precondition = 3;
+  AssociationPatch patch = 4;
+  AssociationSafety safety = 5;
+}
+
+message ApplyAssociationResponse {
+  bool changed = 1;
+
+  // State observed immediately after the mutation. Callers must still perform
+  // an independent GetAssociation before declaring external convergence.
+  AssociationState state = 2;
+}
+
+message GetAssociationSnapshotRequest {}
+
+message AssociationSnapshotHeader {
+  string snapshot_id = 1;
+  string cluster_name = 2;
+  string scheduler_name = 3;
+  uint32 adapter_api_major = 4;
+  uint32 adapter_api_minor = 5;
+  uint32 adapter_api_patch = 6;
+  string capability_fingerprint = 7;
+  google.protobuf.Timestamp started_at = 8;
+  uint32 fingerprint_schema_version = 9;
+}
+
+enum AssociationOwnerSource {
+  ASSOCIATION_OWNER_SOURCE_UNSPECIFIED = 0;
+  ASSOCIATION_OWNER_SOURCE_SCHEDULER = 1;
+  ASSOCIATION_OWNER_SOURCE_ADAPTER_CONFIGURATION = 2;
+}
+
+message UserAssociationSnapshot {
+  string user_id = 1;
+  AssociationState state = 2;
+}
+
+message AccountAssociationSnapshot {
+  string account_name = 1;
+  AssociationState state = 2;
+  repeated UserAssociationSnapshot users = 3;
+  optional string owner_user_id = 4;
+  AssociationOwnerSource owner_source = 5;
+}
+
+message AssociationSnapshotCompletion {
+  string fingerprint = 1;
+  google.protobuf.Timestamp completed_at = 2;
+  uint64 account_count = 3;
+  uint64 user_association_count = 4;
+}
+
+message GetAssociationSnapshotResponse {
+  oneof payload {
+    AssociationSnapshotHeader header = 1;
+    AccountAssociationSnapshot account = 2;
+    AssociationSnapshotCompletion completion = 3;
+  }
+}
+
+service AssociationService {
+  /*
+   * Get the exact logical account or user association.
+   */
+  rpc GetAssociation(GetAssociationRequest) returns (GetAssociationResponse);
+
+  /*
+   * Apply the smallest requested patch when the exact association still
+   * matches the caller's presence and fingerprint precondition.
+   *
+   * Stable google.rpc.ErrorInfo reasons:
+   * - ABORTED: ASSOCIATION_CONFLICT
+   * - FAILED_PRECONDITION: ASSOCIATION_HAS_ACTIVE_JOBS
+   * - FAILED_PRECONDITION: LIMIT_ENFORCEMENT_DISABLED
+   * - INVALID_ARGUMENT: INVALID_ASSOCIATION_PATCH
+   * - INVALID_ARGUMENT: PARTITION_NOT_FOUND
+   * - INVALID_ARGUMENT: QOS_NOT_ALLOWED
+   * - UNIMPLEMENTED: CAPABILITY_NOT_SUPPORTED
+   */
+  rpc ApplyAssociation(ApplyAssociationRequest) returns (ApplyAssociationResponse);
+
+  /*
+   * Stream a complete, consistently ordered snapshot. The first chunk must be
+   * a header and a successful stream must end with a completion chunk. Empty
+   * accounts must be included.
+   */
+  rpc GetAssociationSnapshot(GetAssociationSnapshotRequest)
+      returns (stream GetAssociationSnapshotResponse);
+}

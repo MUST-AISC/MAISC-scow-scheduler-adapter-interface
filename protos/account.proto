@@ -84,33 +84,42 @@ service AccountService {
 
   /*
    * description: create account and specify owner
+   * Deprecated: use AssociationService.ApplyAssociation with an account key.
    * errors:
    * - account exist
    *   ALREADY_EXISTS, ACCOUNT_ALREADY_EXISTS, {}
    * - owner id not exist
    *   NOT_FOUND, USER_NOT_FOUND, {} 
    */
-  rpc CreateAccount(CreateAccountRequest) returns (CreateAccountResponse);
+  rpc CreateAccount(CreateAccountRequest) returns (CreateAccountResponse) {
+    option deprecated = true;
+  }
 
   /*
    * description: block an account 
+   * Deprecated: use AssociationService.ApplyAssociation with field-level limits.
    * errors: 
    * - account not exist
    *   NOT_FOUND, ACCOUNT_NOT_FOUND, {}
    * special case:
    * - account already blocked, don't throw error
    */
-  rpc BlockAccount(BlockAccountRequest) returns (BlockAccountResponse);
+  rpc BlockAccount(BlockAccountRequest) returns (BlockAccountResponse) {
+    option deprecated = true;
+  }
 
   /*
    * description: unblock an account 
+   * Deprecated: use AssociationService.ApplyAssociation with a confirmed baseline.
    * errors: 
    * - account not exist
    *   NOT_FOUND, ACCOUNT_NOT_FOUND, {}
    * special case:
    * - account already unblocked, don't throw error
    */
-  rpc UnblockAccount(UnblockAccountRequest) returns (UnblockAccountResponse);
+  rpc UnblockAccount(UnblockAccountRequest) returns (UnblockAccountResponse) {
+    option deprecated = true;
+  }
 
   /*
    * description: get all accounts and all associated users
@@ -121,9 +130,12 @@ service AccountService {
 
   /*
    * description: query if an account is blocked
+   * Deprecated: use AssociationService.GetAssociation and inspect enforcement.
    * errors: 
    * - account not exist
    *   NOT_FOUND, ACCOUNT_NOT_FOUND, {}
    */
-  rpc QueryAccountBlockStatus(QueryAccountBlockStatusRequest) returns (QueryAccountBlockStatusResponse);
+  rpc QueryAccountBlockStatus(QueryAccountBlockStatusRequest) returns (QueryAccountBlockStatusResponse) {
+    option deprecated = true;
+  }
 }
